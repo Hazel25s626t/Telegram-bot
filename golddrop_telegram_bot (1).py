@@ -249,7 +249,8 @@ def handle_tg_command(session, token, chat_id, text):
         msg = (
             "🤖 GoldDrop Monitor Commands:\n\n"
             "➕ /add <url1> <url2> ...\n"
-            "   (Ek saath multiple URLs ya seedha URLs bhej sakte hain. Auth key ho toh URL|||KEY likhein)\n\n"
+            "   (Ek saath multiple URLs ya seedha URLs bhej sakte hain. Auth key ho toh URL|||KEY likhein)\n"
+            "📄 URLs ki .txt file bhi bhej sakte hain (max 1 MB).\n\n"
             "📋 /list — Saved Firebase URLs dekhein\n"
             "🗑️ /remove <number ya url> — Kisi URL ko hatayein (e.g. /remove 1 ya /remove 1 2)\n"
             "🧹 /clear — Saare saved URLs delete karein"
@@ -347,6 +348,49 @@ def handle_tg_command(session, token, chat_id, text):
         tg_send(session, token, chat_id, "⚠️ Valid Firebase URL bhejein.\nExample:\n/add https://db1.firebaseio.com https://db2.firebaseio.com")
 
 
+MAX_DB_FILE_BYTES = 1024 * 1024
+
+
+def handle_tg_document(session, token, chat_id, document):
+    """Import a UTF-8 text file from the already-authorized Telegram chat."""
+    if not str(document.get("file_name", "")).lower().endswith(".txt"):
+        tg_send(session, token, chat_id, "⚠️ Sirf .txt file bhejein.")
+        return
+    if document.get("file_size", 0) > MAX_DB_FILE_BYTES:
+        tg_send(session, token, chat_id, "⚠️ File 1 MB se badi hai.")
+        return
+    try:
+        response = session.get(
+            f"https://api.telegram.org/bot{token}/getFile",
+            params={"file_id": document["file_id"]}, timeout=10, allow_redirects=False)
+        response.raise_for_status()
+        if response.status_code != 200:
+            raise ValueError("unexpected getFile response")
+        result = response.json()
+        if not result.get("ok"):
+            raise ValueError("getFile failed")
+        path = result["result"]["file_path"]
+        # The token must only be sent to Telegram; reject unexpected paths.
+        if not re.fullmatch(r"[A-Za-z0-9_./-]+", path) or any(p in ("", ".", "..") for p in path.split("/")):
+            raise ValueError("invalid file path")
+        with session.get(f"https://api.telegram.org/file/bot{token}/{path}",
+                         timeout=30, stream=True, allow_redirects=False) as download:
+            download.raise_for_status()
+            if download.status_code != 200:
+                raise ValueError("unexpected download response")
+            content = bytearray()
+            for chunk in download.iter_content(chunk_size=8192):
+                content.extend(chunk)
+                if len(content) > MAX_DB_FILE_BYTES:
+                    raise ValueError("file too large")
+        text = content.decode("utf-8-sig")
+        # Match the local database file's comment convention.
+        text = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+        handle_tg_command(session, token, chat_id, "/add " + text)
+    except (requests.RequestException, ValueError, KeyError, TypeError, UnicodeError):
+        tg_send(session, token, chat_id, "⚠️ File read nahi hui. UTF-8 .txt (max 1 MB) bhejein.")
+
+
 def tg_poller_worker(token, allowed_chat_id):
     """Background thread jo Telegram se commands sunta hai."""
     poll_session = requests.Session()
@@ -377,13 +421,13 @@ def tg_poller_worker(token, allowed_chat_id):
                 if not msg:
                     continue
                 sender_chat_id = msg.get("chat", {}).get("id")
-                text = msg.get("text", "")
-                if not text:
+                # Sirf authorized Chat ID ko allow karein (including file downloads).
+                if str(sender_chat_id) != str(allowed_chat_id):
                     continue
-
-                # Sirf authorized Chat ID ko allow karein
-                if str(sender_chat_id) == str(allowed_chat_id):
-                    handle_tg_command(poll_session, token, sender_chat_id, text)
+                if msg.get("document"):
+                    handle_tg_document(poll_session, token, sender_chat_id, msg["document"])
+                elif msg.get("text"):
+                    handle_tg_command(poll_session, token, sender_chat_id, msg["text"])
         except Exception:
             time.sleep(3)
 

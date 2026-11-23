@@ -50,7 +50,20 @@ Optionally create `golddrop_firebase.txt` with one authorized database URL per l
 https://YOUR_DATABASE.firebaseio.com|||YOUR_AUTH_CREDENTIAL
 ```
 
-Alternatively, after starting the bot, send `/add <url>` in the configured chat. Commands: `/help`, `/add`, `/list`, `/remove`, and `/clear`. Commands are restricted to the configured **chat**, not individual users in a group; use a private chat. Avoid sending credentials in group chats.
+Alternatively, after starting the bot, add multiple databases at once in the configured chat:
+
+```text
+/add https://first.firebaseio.com https://second.firebaseio.com|||AUTH_KEY
+```
+
+You can also send a UTF-8 `.txt` document (up to 1 MB) directly to the bot, with URLs separated by newlines, spaces, or commas. Use `URL|||AUTH_KEY` for optional credentials, without spaces. Lines beginning with `#` are ignored. The bot adds new URL/key pairs and skips duplicates; use `/list` to check them. Example file:
+
+```text
+https://first.firebaseio.com
+https://second.firebaseio.com|||AUTH_KEY
+```
+
+Only send databases you have permission to access. Commands: `/help`, `/add`, `/list`, `/remove`, and `/clear`. Commands and file imports are restricted to the configured **chat**, not individual users in a group; use a private chat. Files containing credentials are sensitive: protect and delete them when no longer needed, and avoid sending credentials in group chats.
 
 ```bash
 python "golddrop_telegram_bot (1).py"
