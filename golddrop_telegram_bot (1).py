@@ -31,7 +31,7 @@ REWARD_LOG = os.path.join(BASE, "golddrop_rewards.txt")
 
 # ─── Telegram Credentials ───
 BOT_TOKEN = ""
-CHAT_ID = 
+CHAT_ID = 0
 
 # ─── Config ───
 REDEEM_URL = "https://www.golddropwins.com/"
@@ -634,11 +634,6 @@ def main():
         print("\nRuka. seen-state saved.")
         save_seen(seen)
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-urn 0
 
 
 if __name__ == "__main__":
