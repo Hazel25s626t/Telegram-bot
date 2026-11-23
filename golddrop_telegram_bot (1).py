@@ -12,6 +12,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
+from dotenv import load_dotenv
 
 try:
     import winsound
@@ -164,6 +165,15 @@ def save_seen(seen):
 
 
 def load_tg_config():
+    # Environment variables take priority; an optional local .env supplies defaults.
+    load_dotenv(os.path.join(BASE, ".env"))
+    env_token = os.getenv("BOT_TOKEN", "").strip()
+    env_chat = os.getenv("CHAT_ID", "").strip()
+    if env_token or env_chat:
+        if not env_token or not env_chat:
+            raise ValueError("Set both BOT_TOKEN and CHAT_ID in the environment or .env")
+        return {"bot_token": env_token, "chat_id": env_chat}
+
     if BOT_TOKEN and CHAT_ID:
         return {"bot_token": BOT_TOKEN, "chat_id": CHAT_ID}
 
