@@ -2,7 +2,7 @@
 
 An educational Python script that watches Firebase Realtime Database messages and sends matching GoldDrop reward alerts to a Telegram chat. Use it **only with databases and messages you own or have explicit permission to access**. Messages, phone numbers, OTPs and reward codes can be sensitive.
 
-The supplied bot logic is unchanged except for fixing an empty `CHAT_ID` assignment and a stray duplicate fragment at the end, which prevented Python from parsing it.
+The supplied bot logic is preserved, with syntax fixes and environment-based Telegram configuration.
 
 ## What you need
 
@@ -22,7 +22,20 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-Create `golddrop_telegram.json` next to the script (replace the values locally; do not commit or share them):
+### Configure your Telegram bot
+
+Copy `.env.example` to `.env` in the same directory as the script, then edit `.env` with your real values:
+
+```dotenv
+BOT_TOKEN=YOUR_BOT_TOKEN
+CHAT_ID=123456789
+```
+
+On Linux / macOS, copy it with `cp .env.example .env`; on Windows PowerShell, use `Copy-Item .env.example .env`. Keep `.env` private: it is ignored by Git. Get your token from BotFather and your chat ID as described above. Do not put real secrets in `.env.example` or GitHub source files.
+
+Alternatively, set **both** `BOT_TOKEN` and `CHAT_ID` as environment variables on your hosting provider; these override `.env` values. Environment configuration takes priority over the script constants and JSON file. If only one value is set, the script reports an error. Restart the bot after changing configuration.
+
+As an alternative to environment configuration, create `golddrop_telegram.json` next to the script (replace the values locally; do not commit or share them):
 
 ```json
 {
